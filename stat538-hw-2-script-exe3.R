@@ -1,0 +1,306 @@
+dev.off
+rm(list=ls(all=TRUE))
+library("glmnet")
+setwd("/Users/chenruqian/Desktop/desktop/Academic/WInter\ 2017/STAT538/Syllabus\ and\ Homeworks")
+
+# Input
+# Reference for reading inputs http://www.ats.ucla.edu/stat/r/modules/raw_data.htm
+myData <- read.table("crime.txt", header = FALSE)
+
+# Pre-processing
+# Reference for standardization http://stackoverflow.com/questions/15215457/standardize-data-columns-in-r
+df <- myData[,-2]
+#either eventually get lambdaCV 0.1706233
+df <- scale(df)
+#or eventually get lambdaCV 50.1528
+#df[,-1] <- scale(df[,-1])
+#df[,1] <- df[,1]-mean(df[,1])
+
+# check that we get mean of 0 and sd of 1 for V2, ..., V7 and just mean 0 for V1
+colMeans(df) # faster version of apply(scaled.dat, 2, mean)
+apply(df, 2, sd)
+N <- dim(df)[1] # number of sample points
+
+#######################################
+### cross validation to find lambda
+#######################################
+
+X <- as.matrix(df[,-1])
+Y <- as.matrix(df[,1])
+lambdaMax <- max(1/N* t(X)%*%Y)
+lengthLambda <- 50
+lambdaVec <- rev(seq(from = 0, to = lambdaMax, by = (lambdaMax -0)/(lengthLambda-1)))
+#perm <- sample(c(1:50), 50, replace = FALSE, prob = NULL)
+perm <- c(1:50)
+Xtrain <- X[perm[1:40],]
+Ytrain <- Y[perm[1:40]]
+N <- dim(Xtrain)[1]
+Xtest <- X[perm[41:50],]
+Ytest <- Y[perm[41:50]]
+
+
+
+# Utility functions
+l1norm<- function(x) sum(abs(x))
+r <- function(x, y, beta) y - x%*% beta 
+softThres <- function(x, lambda) {
+  if (x >= lambda) x - lambda
+  else if (x<lambda & x > -lambda) 0
+  else  lambda + x
+}
+lassoCost <- function(beta,x,y,lambda) {t(y- x %*% beta) %*% (y- x %*% beta) + lambda *l1norm(beta) }
+
+beta <- rep(0,5)
+lassoCostLambdaPath <- c()
+
+for (j in c(1:lengthLambda)) {
+  
+  betaTraj <- beta
+  oldNorm <- l1norm(beta)
+  betaNormTraj <- oldNorm
+  lassoCostTraj <- c()
+  count <- 0
+  lambda <- lambdaVec[j]
+  
+  while(l1norm(beta) >= 0 & count < 100){ # Lol i hard upperbounded #step by 100
+    count <- count + 1
+    oldNorm <- l1norm(beta)
+    randInd <- floor(runif(1,1,6))
+    randomTF <- c(FALSE, FALSE, FALSE, FALSE, FALSE)
+    randomTF[randInd] <- TRUE
+    vecR <- as.matrix(r(Xtrain, Ytrain, beta))
+    for (i in c(1:5)){ if (randomTF[i]) {
+        print("hello") 
+        print(i)
+        betaCoordUpdate <- softThres(beta[i] + 1/N *Xtrain[,i]%*% vecR , lambda)
+        beta[i] <- c(betaCoordUpdate)
+      }
+    }
+    betaTraj <- rbind(betaTraj,beta)
+    betaNormTraj <- append(betaNormTraj, l1norm(beta))
+    lassoCostTraj <- append(lassoCostTraj, lassoCost(beta,Xtrain,Ytrain,lambda))
+  }
+  png(filename=paste("betaNorm,lambda =", lambda,".png"))
+  plot(betaNormTraj, main = paste("betaNorm for lambda =", lambda),  xlab = "counter", ylab = "l1norm(beta)")
+  dev.off()
+  png(filename=paste("lassoCost, lambda =", lambda,".png"))
+  plot(lassoCostTraj, main = paste("lassoCost for lambda =", lambda),  xlab = "counter", ylab = "lasso Cost")
+  dev.off()
+  lassoCostLambdaPath <- append(lassoCostLambdaPath,lassoCost(beta, Xtest, Ytest, lambda))
+}
+dev.off()
+length(lassoCostLambdaPath)
+plot(lassoCostLambdaPath) # find the cost on test sets along lambdas' path
+lambdaCV <- lambdaVec[which.max(lassoCostLambdaPath)]
+
+
+
+#######################################
+### bootstrapping
+####################################### 
+bootstrapTimes <- 30
+bootstrapBagSize <- 50
+lambda <- lambdaCV
+betaBootstrap <- c(0,0,0,0,0)
+for (i in c(1:bootstrapTimes)){
+  bag <- floor(runif(bootstrapBagSize, 1, 51)) # probability that the bag has entires=51 is zero
+  beta <- rep(0,5) # c(0,0,0,0,0)
+  perm <- sample(c(1:50), 50, replace = TRUE, prob = NULL)
+  Xtrain <- X[perm[1:40],]
+  Ytrain <- Y[perm[1:40]]
+  N <- dim(Xtrain)[1]
+  Xtest <- X[perm[41:50],]
+  Ytest <- Y[perm[41:50]]
+  
+  #betaTraj <- beta
+  oldNorm <- l1norm(beta)
+  betaNormTraj <- oldNorm
+  lassoCostTraj <- c()
+  count <- 0
+  #lambda <- lambdaVec[j]
+  
+  while(l1norm(beta) >= 0 & count < 100){ # Lol i hard upperbounded #step by 100
+    count <- count + 1
+    oldNorm <- l1norm(beta)
+    randInd <- floor(runif(1,1,6))
+    randomTF <- c(FALSE, FALSE, FALSE, FALSE, FALSE)
+    randomTF[randInd] <- TRUE
+    vecR <- as.matrix(r(Xtrain, Ytrain, beta))
+    for (i in c(1:5)){ 
+      if (randomTF[i]) {
+        print("hello") 
+        print(i)
+        betaCoordUpdate <- softThres(beta[i] + 1/N *Xtrain[,i]%*% vecR , lambda)
+        beta[i] <- c(betaCoordUpdate)
+      }
+    }
+    #betaTraj <- rbind(betaTraj,beta)
+    betaNormTraj <- append(betaNormTraj, l1norm(beta))
+    lassoCostTraj <- append(lassoCostTraj, lassoCost(beta,Xtrain,Ytrain,lambda))
+  }
+  plot(betaNormTraj, main = paste("betaNorm for lambda =", lambda),  xlab = "counter", ylab = "l1norm(beta)")
+  plot(lassoCostTraj, main = paste("lassoCost for lambda =", lambda),  xlab = "counter", ylab = "lasso Cost")
+  betaBootstrap <- rbind(betaBootstrap,beta)
+}
+betaBootstrap <- betaBootstrap[-1,]
+betaStandardError <- apply(betaBootstrap, 2, sd) 
+# Reference http://stackoverflow.com/questions/18047896/column-standard-deviation-r
+# In apply(), the second argument, margin, "is a vector giving the subscripts ...
+# which the function will be applied over." 2 indicates columns 
+
+# the first column of bse stands for times we do bootstrap. Can't find a pattern.
+bse <- c(30,0.20215859, 0.07491063, 0.04800450, 0.03954429, 0.00000000)
+bse <- rbind(bse,c(60,0.190102386, 0.074249393, 0.071675090, 0.008555458, 0.000000000))
+bse <- rbind(bse,c(120, 0.19307929, 0.06906458, 0.06337001, 0.03551802, 0.01301262))
+bse <- rbind(bse,c(240, 0.19433808, 0.05898559, 0.06699883, 0.00869289, 0.01495097))
+bse <- rbind(bse,c(480,  0.22327911, 0.07117454, 0.07530891, 0.05368533, 0.03128120))
+
+betaBootstrapBackup480 <- betaBootstrap[-1,]
+
+#########################################
+### re-estimate lambda for bootstrap bag
+######################################### 
+
+
+
+#################
+### Use Package #
+###  GLMNET   ###
+#################
+# Manual https://cran.r-project.org/web/packages/glmnet/glmnet.pdf
+# Coercing X into matrix http://stackoverflow.com/questions/30717201/glmnet-not-training-am-i-using-it-wrong
+count3 <- 1
+lambdaCV <- c()
+while(count3 < 5){
+  modelCV<- cv.glmnet(as.matrix(df[,-1]), df[,1])
+  lambdaCV <- append(lambdaCV, modelCV$lambda.min)
+  count3 <- count3 + 1
+} 
+lambdaCV <- mean(lambdaCV)
+
+#################
+betaInfo <- data.frame(matrix(vector(), 1, 5),stringsAsFactors=F)
+# fix lambdaCV at the obtained value 34.2453
+counter <- 1
+seq <- seq(from = 0.5*lambdaCV, to = 1.5*lambdaCV, by = 0.2)
+while(counter < 100){
+  # bootstrapping, selecting with replacement
+  bag <- floor(runif(100, 1, 51)) # each bag has 100 observations
+  model<- glmnet(as.matrix(df[bag,-1]), df[bag,1], lambda = rev(seq))
+  beta <- as.vector(model$beta[,ceiling(length(seq)/2)])
+  betaInfo <- rbind(betaInfo, beta)
+  counter <- counter + 1
+} 
+betaInfo <- betaInfo[-1,]
+
+standardError <- c()
+counter2 <- 1
+while(counter2 < 6){
+  sem<-sd(betaInfo[,counter2])/sqrt(length(betaInfo[,counter2]))
+  standardError <- append(standardError,sem)
+  counter2 <- counter2+1
+}
+plot(standardError)
+
+
+
+#################
+betaInfo <- data.frame(matrix(vector(), 1, 6),stringsAsFactors=F)
+# fix lambdaCV at the obtained value 34.2453
+counter <- 1
+lambdaCVvector <- c()
+while(counter < 100){
+  # bootstrapping, selecting with replacement
+  bag <- floor(runif(100, 1, 51)) # each bag has 100 observations
+  modelCVtmp<- cv.glmnet(as.matrix(df[bag,-1]), df[bag,1])
+  lambdaCVtmp <- modelCVtmp$lambda.min
+  lambdaCVvector <- append(lambdaCVvector, lambdaCVtmp)
+  seq <- seq(from = 0.5*lambdaCVtmp, to = 1.5*lambdaCVtmp, by = 0.2)
+  model<- glmnet(as.matrix(df[bag,-1]), df[bag,1], lambda = rev(seq))
+  beta <- as.vector(model$beta[,ceiling(length(seq))])
+  betaInfo <- rbind(betaInfo, beta)
+  counter <- counter + 1
+} 
+betaInfo <- betaInfo[-1,]
+
+standardError <- c()
+counter2 <- 1
+while(counter2 < 6){
+  sem<-sd(betaInfo[,counter2])/sqrt(length(betaInfo[,counter2]))
+  standardError <- append(standardError,sem)
+  counter2 <- counter2+1
+}
+plot(standardError)
+
+
+#############################################################################
+dev.off
+rm(list=ls(all=TRUE))
+library("glmnet")
+setwd("/Users/chenruqian/Desktop/desktop/Academic/WInter\ 2017/STAT538/Syllabus\ and\ Homeworks")
+# Input
+# Reference for reading inputs http://www.ats.ucla.edu/stat/r/modules/raw_data.htm
+myData <- read.table("crime.txt", header = FALSE)
+# Pre-processing
+# Reference for standardization http://stackoverflow.com/questions/15215457/standardize-data-columns-in-r
+df <- myData[,-2]
+df[,-1] <- scale(df[,-1])
+df[,1] <- df[,1] - mean(df[,1])
+
+# Define X, Y matrices 
+# X <- as.matrix(myData[,-c(1,2)])
+# Y <- as.matrix(myData[,1])
+X <- as.matrix(df[,-1])
+Y <- as.matrix(df[,1])
+N <- dim(X)[1] # number of sample points 
+beta <- as.matrix(c(1,2,3,4,5))
+lambdaMax <- max(1/50 * abs(t(X)%*%Y)) # = 153.59
+
+softThres <- function(x, lambda) {
+  if (x >= lambda) x - lambda
+  else if (x<lambda & x > -lambda) 0
+  else  lambda + x
+}
+
+#vecR <- function(beta, j)  Y-(X[, -j] %*% beta[-j]) # a vector of length N 
+#betaUpdate <- function(r, lambda,N,j) {1/N * (X[,j]%*%r), lambda)}
+
+vecR <- function(beta)  Y-(X %*% beta)
+betaUpdate <- function(r, lambda,N,j,expre) {if(expre) softThres( (beta[j] + (1/N) * (X[,j]%*%r)), lambda) else beta[j]}
+
+beta <- as.matrix(c(0,0,0,0,0))
+lambda <-25
+
+# 154
+# 152~100: first coord nonzero
+# 50: 1, 3, 4
+
+
+#vecR1 <- vecR(beta, 1)
+#vecR2 <- vecR(beta, 2)
+#vecR3 <- vecR(beta, 3)
+#vecR4 <- vecR(beta, 4)
+#vecR5 <- vecR(beta, 5)
+
+#randomTF <- sample(c(TRUE,FALSE), 1, TRUE)
+randInd <- floor(runif(1,1,6))
+randomTF <- c(FALSE, FALSE, FALSE, FALSE, FALSE)
+randomTF[randInd] <- TRUE
+
+vecRnew <- vecR(beta)
+
+betaUpdate1 <- betaUpdate(vecRnew, lambda,N, 1, randomTF[1])
+betaUpdate2 <- betaUpdate(vecRnew, lambda,N, 2, randomTF[2])
+betaUpdate3 <- betaUpdate(vecRnew, lambda,N, 3, randomTF[3])
+betaUpdate4 <- betaUpdate(vecRnew, lambda,N, 4, randomTF[4])
+betaUpdate5 <- betaUpdate(vecRnew, lambda,N, 5, randomTF[5])
+beta <- cbind(betaUpdate1,betaUpdate2,betaUpdate3,betaUpdate4,betaUpdate5)
+
+# path wise gradient descent, using previous lambda as warm start
+
+################# scratch ################
+softThres2 <- function(x) {
+  if (x >= 2) x - 2
+  else if (x<2 & x > -2) 0
+  else  2 + x
+}
