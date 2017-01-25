@@ -39,7 +39,7 @@ fistaY <- 0
 fistaLambda <- 0
 
 # I used glmnet and built-in cross-validation  to find a good lambda.
-# Alternatively lambda can be found using codes for exe3.
+# Alternatively lambda can be found using cross-validation by hand. I want to upload code by Jan 28th 2017.
 modelCV <- cv.glmnet(X, Y, alpha = 0) # alpha=0 represents ridge cost
 lambda <- modelCV$lambda.min
 
