@@ -3,13 +3,13 @@
 # 
 # 
 # Implemented FISTA on LASSO with faster convergence rate.
-# Idea: instead of just updating (x_t), we now add a new sequence (y_t). Here each y_t is just a linear combination of x_{t-1} and x_t. Then we feed y_t into the update to x_t. 
+# Idea: instead of just updating (x_t), we now add a new sequence (y_t). Here each y_t is just a linear... 
+# ... combination of x_{t-1} and x_t. Then we feed y_t into the update to x_t. 
 # Reference paper: A Fast Iterative Shrinkage-Thresholding Algorithm for Linear Inverse Problems∗ Amir Beck† and Marc Teboulle
 #
 #
 
-# Auxiliary - inputs, functions, 
-#######################################################################################
+
 dev.off
 rm(list=ls(all=TRUE))
 library("glmnet")
@@ -19,6 +19,8 @@ library("glmnet")
 #####################################
 setwd("...")
 
+# Auxiliary - inputs, functions
+#######################################################################################
 
 # Input
 # Reference for reading inputs http://www.ats.ucla.edu/stat/r/modules/raw_data.htm
