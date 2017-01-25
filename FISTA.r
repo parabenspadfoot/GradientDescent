@@ -7,6 +7,9 @@
 # ... combination of x_{t-1} and x_t. Then we feed y_t into the update to x_t. 
 # Reference paper: A Fast Iterative Shrinkage-Thresholding Algorithm for Linear Inverse Problems∗ Amir Beck† and Marc Teboulle
 #
+# Instructions: run Part "-2", "-1" and "0" first. Then run part "1" if we want regular gradient descent, ...
+# ... and run part "2" if we want the accelerated version, i.e. FISTA. 
+#
 ##############################################################################################################################
 
 ##########################################################
