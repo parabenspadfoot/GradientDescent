@@ -24,7 +24,12 @@ setwd("...")
 
 # Input
 # Reference for reading inputs http://www.ats.ucla.edu/stat/r/modules/raw_data.htm
-myData <- read.table("crime.txt", header = FALSE)
+# Data source https://web.stanford.edu/~hastie/StatLearnSparsity_files/DATA/crime.html
+# Note that this data is not sparse, so we can just do least-squares directly. 
+# But even though the data just has 5 predictors, we want to reduce further the number of "important" predictors. 
+# Also, the algorithm can be used for sparse models. 
+
+myData <- read.table("crime.txt", header = FALSE) 
 
 X <- as.matrix(myData[,3:7])
 Y <- as.matrix(myData[,1])
