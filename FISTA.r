@@ -119,7 +119,7 @@ title(paste("Ridge Regression with num of descents made = ",descentStepNum))
 
 
 #######################################################################################
-# FISTA Accelerated gradient descent (with armijo to choose step size)
+# Part 2: FISTA Accelerated gradient descent (with armijo to choose step size)
 #######################################################################################
 
 beta <- rep(0,5)
@@ -169,9 +169,17 @@ legend("bottomright", inset=.05,  legend=c("funding","hs","not-hs","college","co
 
 
 #######################################################################################
-# Armijo (backup version)
+# Part 3: Armijo (backup version)
 #######################################################################################
-
+# I separated Armijo backtracking part out in case I need it in the future.
+# Armijo algoritm is used to choose step sizes in gradient descent.
+# The idea is that we want to go against the gradient to decrease the cost / objective function.
+#     The gradient is only a good measurement locally.
+#     Therefore we want to take a step that's small so the gradient is still a good measure, but ...
+# ... still as large of a step as possible. So we can decrease correctly yet still fast. 
+# We do this by starting at a large step size. Then we decrease stepsize gradually (as a geometric sequence at rate "gamma") ...
+# ... till we are happy with the decrease (i.e. the condition of the while loop) in the objective function. 
+  
 alpha <- 0.5
 gamma <- 0.8
 s <- 1 # step size = 1/L, starting at L=1, i.e. s=1
@@ -181,7 +189,7 @@ fbeta <- f(beta)
 gradel <- t(grad(beta)) %*% delta(beta)
 counter <- 1
 sArray <- c()
-while (f(beta + s*delta(beta)) > fbeta + alpha * s * gradel){
+while (f(beta + s*delta(beta)) > fbeta + alpha * s * gradel){ # amount of cost function decrease 
   counter <- counter + 1
   sArray <- append(sArray, s)
   s <- gamma * s 
