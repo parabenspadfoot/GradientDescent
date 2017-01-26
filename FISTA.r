@@ -2,13 +2,18 @@
 # 
 # This file contains ridge regression: gradient descent + accelerated gradient descent (FISTA)
 # 
+# Reference paper: A Fast Iterative Shrinkage-Thresholding Algorithm for Linear Inverse Problems∗ Amir Beck† and Marc Teboulle
+#
 # Implemented FISTA on LASSO with faster convergence rate.
 # Idea: instead of just updating (x_t), we now add a new sequence (y_t). Here each y_t is just a linear... 
 # ... combination of x_{t-1} and x_t. Then we feed y_t into the update to x_t. 
-# Reference paper: A Fast Iterative Shrinkage-Thresholding Algorithm for Linear Inverse Problems∗ Amir Beck† and Marc Teboulle
+# 
+# We used Armijo backtracking to tune the step size at each gradient iteration iteration. ...
+# For more infortion, see Part "3" of the codes below.
 #
 # Instructions: run Part "-2", "-1" and "0" first. Then run part "1" if we want regular gradient descent, ...
-# ... and run part "2" if we want the accelerated version, i.e. FISTA. 
+# ... and run part "2" if we want the accelerated version, i.e. FISTA. Part "3" is Armijo algorithm, ... 
+# separated out for reproducibility later.
 #
 ##############################################################################################################################
 
@@ -67,6 +72,7 @@ betaLSl2norm <- l2norm(betaLS)
 #######################################################################################
 # Part 1: gradient descent (with armijo to choose step size)
 #######################################################################################
+  
 beta <- rep(0,5)
 t <- 1
 valueArray <- c()
@@ -186,6 +192,11 @@ legend("bottomright", inset=.05,  legend=c("funding","hs","not-hs","college","co
 # ... still as large of a step as possible. So we can decrease correctly yet still fast. 
 # We do this by starting at a large step size. Then we decrease stepsize gradually (as a geometric sequence at rate "gamma") ...
 # ... till we are happy with the decrease (i.e. the condition of the while loop) in the objective function. 
+#
+# Note that one arbitrary choice is where to start the search, i.e. what value do we initialize the step size s to. 
+# We know s is 1/L where L indicates that our cost function is L-smooth, i.e. its Lipschitz constant is L. 
+# We start at L=1, i.e. s = 1/L = 1. Then we decrease s to gamma * s. 
+##############################################################################################################################
   
 alpha <- 0.5
 gamma <- 0.8
